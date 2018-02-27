@@ -10,7 +10,7 @@
     
 </body>
 <script>
-    let data = {
+    /*let data = {
         name :'sty',
         age:22
     }
@@ -32,6 +32,40 @@
                 }
             })
         }
+    }*/
+    class Subject{
+        constructor() {
+            this.observes = []
+        }
+        addObserve(observe) {
+            this.observes.push(observe)
+        }
+        removeObserve(observe) {
+            let index = this.observes.indexOf(observe)
+            if(index > -1) {
+                this.observes.splice(index,1)
+            }
+        }
+        notify() {
+            this.observes.forEach(item => {
+                item.update()
+            })
+        }
     }
+    class Observe{
+        constructor () {
+            this.update = function () {
+                console.log('update')
+            }
+        }
+    }
+    let observe1 = new Observe()
+    let subject = new Subject()
+    observe1.update()
+    subject.addObserve(observe1)
+    let observe2 = new Observe()
+    observe2.update()
+    subject.addObserve(observe2)
+    subject.notify()
 </script>
 </html>

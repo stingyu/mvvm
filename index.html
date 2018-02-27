@@ -1,71 +1,150 @@
 <!DOCTYPE html>
 <html lang="zh-Hans">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>MVVM原理</title>
+    <title>单向数据绑定</title>
 </head>
+
 <body>
-    
-</body>
-<script>
-    /*let data = {
-        name :'sty',
-        age:22
-    }
-    observe(data)
-    function observe(data) {
-        if(!data || typeof data !== 'object') return
-        for(var key in data) {
-            let key_val = data[key]  //暂存key
-            Object.defineProperty(data,key,{
-                configurable:true,
-                enumerable: true,
-                get: function () {
-                    console.log('获取'+key+':'+key_val)
-                    return key_val
-                },
-                set: function (newVal) {
-                    console.log('修改属性')
-                    key_val = newVal
+    <div id="app">
+        <h1>{{ name }} 's age is {{ age }}</h1>
+    </div>
+
+    <script>
+        let id = 0
+        let currentObserve = null
+
+        class mvvm {
+            constructor(opts) {
+                this.init(opts)
+                observe(this.$data)
+                this.compile(this.$node)
+            }
+            init(opts) {
+                this.$node = document.querySelector(opts.el)
+                this.$data = opts.data
+                this.observes = []
+            }
+            compile(node) {   //扫描元素节点
+                if (node.nodeType == 1) {  //元素节点
+                    node.childNodes.forEach(ChildNode => {
+                        this.compile(ChildNode)
+                    })
+                } else if (node.nodeType == 3) { //文本节点
+                    this.renderText(node)
                 }
-            })
-        }
-    }*/
-    class Subject{
-        constructor() {
-            this.observes = []
-        }
-        addObserve(observe) {
-            this.observes.push(observe)
-        }
-        removeObserve(observe) {
-            let index = this.observes.indexOf(observe)
-            if(index > -1) {
-                this.observes.splice(index,1)
+            }
+            renderText(node) {   //更新dom的内容
+                let reg = /{{(.+?)}}/g
+                let match
+                while (match = reg.exec(node.nodeValue)) {
+                    let bind_name = match[0]
+                    let bind_key = match[1].trim()
+                    node.nodeValue = node.nodeValue.replace(bind_name, this.$data[bind_key])
+                    new Observe(this,bind_key,function(oldValue,value) {   //对数据变化进行订阅
+                        node.nodeValue =node.nodeValue.replace(oldValue,value)
+                    })
+                }
             }
         }
-        notify() {
-            this.observes.forEach(item => {
-                item.update()
-            })
-        }
-    }
-    class Observe{
-        constructor () {
-            this.update = function () {
-                console.log('update')
+
+        class Observe {
+            constructor(target, key, callback) {
+                this.subjects = {}
+                this.target = target
+                this.key = key
+                this.callback = callback
+                this.value = this.getValue()
+            }
+            update() {  //数据刷新模块
+                let oldValue = this.value
+                let value = this.getValue()
+                if (oldValue !== value) {
+                    this.value = value
+                    this.callback.bind(this.target)(oldValue, value)
+                }
+            }
+            subscribe(subject) {
+                if (!this.subjects[subject.id]) {
+                    console.log('订阅：' + subject)
+                    subject.addObserve(this)
+                    this.subjects[subject.id] = subject
+                }
+            }
+            getValue() {
+                currentObserve = this
+                console.log('当前的currentObserve是')
+                console.log(this)
+                let value = this.target.$data[this.key]
+                currentObserve = null
+                return value
             }
         }
-    }
-    let observe1 = new Observe()
-    let subject = new Subject()
-    observe1.update()
-    subject.addObserve(observe1)
-    let observe2 = new Observe()
-    observe2.update()
-    subject.addObserve(observe2)
-    subject.notify()
-</script>
+
+        class Subject {
+            constructor() {
+                this.observes = []
+                this.id = id++
+            }
+            addObserve(observe) {
+                this.observes.push(observe)
+            }
+            removeObserve(observe) {
+                let index = this.observes.indexOf(observe)
+                if (index > -1) {
+                    this.observes.splice(index, 1)
+                }
+            }
+            notify() {
+                this.observes.forEach(observe => {
+                    observe.update()
+                })
+            }
+        }
+        function observe(data) { //监听数据
+            if(!data || typeof data !== 'object') return
+            for(var key in data) {
+                let cur_val = data[key]   //暂存数据
+                let subject = new Subject()
+                Object.defineProperty(data,key,{
+                    configurable:true,
+                    enumerable:true,
+                    get: function() {
+                        console.log(`get ${key} : ${cur_val}`)
+                        if(currentObserve) {
+                            console.log('has currentObserve')
+                            currentObserve.subscribe(subject)
+                        }
+                        return cur_val
+                    },
+                    set: function (newVal) {
+                        cur_val = newVal
+                        subject.notify()  //通知所有订阅该属性的observe
+
+                    }
+                })
+                if(typeof cur_val == 'object') {
+                    observe()
+                }
+
+            }
+
+        }
+        let vm = new mvvm({
+            el: '#app',
+            data: {
+                name : 'sty',
+                age : 22
+            }
+        })
+         
+         setInterval(function() {
+             vm.$data.age++
+         },1000)
+    </script>
+</body>
+
 </html>

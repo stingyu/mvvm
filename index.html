@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MVVM原理</title>
+</head>
+<body>
+    
+</body>
+<script>
+    let data = {
+        name :'sty',
+        age:22
+    }
+    observe(data)
+    function observe(data) {
+        if(!data || typeof data !== 'object') return
+        for(var key in data) {
+            let key_val = data[key]  //暂存key
+            Object.defineProperty(data,key,{
+                configurable:true,
+                enumerable: true,
+                get: function () {
+                    console.log('获取'+key+':'+key_val)
+                    return key_val
+                },
+                set: function (newVal) {
+                    console.log('修改属性')
+                    key_val = newVal
+                }
+            })
+        }
+    }
+</script>
+</html>

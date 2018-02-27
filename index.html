@@ -26,7 +26,6 @@
             init(opts) {
                 this.$node = document.querySelector(opts.el)
                 this.$data = opts.data
-                this.observes = []
             }
             compile(node) {   //扫描元素节点
                 if (node.nodeType == 1) {  //元素节点
@@ -59,7 +58,7 @@
                 this.callback = callback
                 this.value = this.getValue()
             }
-            update() {  //数据刷新模块
+            update() {  //数据刷新模块,数据发生update后，调用callback函数，更新视图
                 let oldValue = this.value
                 let value = this.getValue()
                 if (oldValue !== value) {
@@ -68,16 +67,14 @@
                 }
             }
             subscribe(subject) {
-                if (!this.subjects[subject.id]) {
-                    console.log('订阅：' + subject)
+                if (!this.subjects[subject.id]) { //如果currentObserve还没有订阅过该subject时，订阅
+                    console.log('订阅：' , subject)
                     subject.addObserve(this)
                     this.subjects[subject.id] = subject
                 }
             }
-            getValue() {
+            getValue() { //获取currenObserve观察的data[key]的值
                 currentObserve = this
-                console.log('当前的currentObserve是')
-                console.log(this)
                 let value = this.target.$data[this.key]
                 currentObserve = null
                 return value
@@ -104,17 +101,17 @@
                 })
             }
         }
-        function observe(data) { //监听数据
+        function observe(data) { //监听数据，利用Object.defineProperty()实现监听到数据发生改变时进行拦截
             if(!data || typeof data !== 'object') return
             for(var key in data) {
                 let cur_val = data[key]   //暂存数据
-                let subject = new Subject()
+                let subject = new Subject() //遍历data里的属性的时候，为每个属性创建一个subject实例
                 Object.defineProperty(data,key,{
                     configurable:true,
                     enumerable:true,
                     get: function() {
                         console.log(`get ${key} : ${cur_val}`)
-                        if(currentObserve) {
+                        if(currentObserve) {  //{} 转换成布尔值是true
                             console.log('has currentObserve')
                             currentObserve.subscribe(subject)
                         }
@@ -122,7 +119,7 @@
                     },
                     set: function (newVal) {
                         cur_val = newVal
-                        subject.notify()  //通知所有订阅该属性的observe
+                        subject.notify()  //通知所有订阅该属性的observe，更新视图层数据
 
                     }
                 })
@@ -141,9 +138,9 @@
             }
         })
          
-         setInterval(function() {
-             vm.$data.age++
-         },1000)
+        //  setInterval(function() {
+        //      vm.$data.age++
+        //  },1000)
     </script>
 </body>
 
